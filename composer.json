@@ -1,5 +1,7 @@
 {
     "type": "project",
+    "name": "tulik/sylius-ecommerce-with-plugins",
+    "description": "Sylius e-commerce solution including plugins installed and tested",
     "keywords": [
         "symfony",
         "sylius",
