@@ -146,10 +146,6 @@ jobs:
                 run: bin/console messenger:setup-transports -vvv
 
             -
-                name: Install Sylius
-                run: bin/console sylius:install -n
-
-            -
                 name: Load fixtures
                 run: bin/console sylius:fixtures:load -n
 
