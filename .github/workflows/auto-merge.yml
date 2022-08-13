@@ -5,8 +5,15 @@ on:
 
 jobs:
     auto-merge:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-latest
         steps:
+            -
+                name: 'Checkout Repository'
+                uses: actions/checkout@v3
+            -
+                name: 'Dependency Review'
+                uses: actions/dependency-review-action@v2
+
             -   uses: actions/checkout@v2
 
             -
