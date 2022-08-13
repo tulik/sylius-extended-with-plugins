@@ -2,9 +2,9 @@ name: Build
 
 on:
     push:
-        branches: [master]
+        branches: [main]
     pull_request:
-        branches: [master]
+        branches: [main]
     release:
         types: [created]
     schedule:
@@ -14,7 +14,7 @@ on:
 
 jobs:
     tests:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-latest
 
         name: "PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }}, MySQL ${{ matrix.mysql }}"
 
@@ -150,10 +150,6 @@ jobs:
                 run: bin/console sylius:fixtures:load -n
 
             -
-                name: Install Sylius
-                run: bin/console sylius:install -n
-
-            -
                 name: Validate composer.json
                 run: composer validate --ansi --strict --no-check-publish
 
@@ -199,6 +195,7 @@ jobs:
                 name: Run JS Behat
                 run: vendor/bin/behat --colors --strict --no-interaction -vvv -f progress --tags="@javascript&&~@todo&&~@cli" || vendor/bin/behat --colors --strict --no-interaction -vvv -f progress --tags="@javascript&&~@todo&&~@cli" --rerun || vendor/bin/behat --colors --strict --no-interaction -vvv -f progress --tags="@javascript&&~@todo&&~@cli" --rerun
                 if: always()
+                
             -
                 name: Upload Behat logs
                 uses: actions/upload-artifact@v2
