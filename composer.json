@@ -34,6 +34,7 @@
         "odiseoteam/sylius-blog-plugin": "^1.3",
         "sylius/admin-order-creation-plugin": "^0.13.0",
         "sylius/paypal-plugin": "^1.2.1",
+        "sylius/refund-plugin": "^1.2",
         "sylius/sylius": "^1.11",
         "symfony/dotenv": "^4.4 || ^5.4",
         "symfony/flex": "^1.11",
