@@ -1,0 +1,5 @@
+imports:
+    - { resource: "@SyliusRefundPlugin/Resources/config/app/config.yml" }
+sylius_refund:
+    pdf_generator:
+        enabled: false
