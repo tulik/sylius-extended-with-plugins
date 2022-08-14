@@ -8,8 +8,10 @@ imports:
     - { resource: "@SyliusPayPalPlugin/Resources/config/config.yaml" }
 
     - { resource: "@BitBagSyliusCmsPlugin/Resources/config/config.yml" }
+    - { resource: "@BitBagSyliusMolliePlugin/Resources/config/config.yaml" }
 
     - { resource: "@OdiseoSyliusBlogPlugin/Resources/config/config.yaml" }
+
 
 parameters:
     sylius_core.public_dir: '%kernel.project_dir%/public'

@@ -256,6 +256,9 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/ralouphie/getallheaders" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/friendsofsymfony/jsrouting-bundle" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/sylius/admin-order-creation-plugin" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/mollie/mollie-api-php" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/bitbag/mollie-plugin" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/willdurand/js-translation-bundle" />
     </content>
     <content url="file://$MODULE_DIR$/node_modules" />
     <orderEntry type="inheritedJdk" />

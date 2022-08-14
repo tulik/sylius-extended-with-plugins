@@ -1,8 +1,11 @@
-sylius_paypal_webhook:
-    resource: "@SyliusPayPalPlugin/Resources/config/webhook_routing.yaml"
+_bazinga_jstranslation:
+    resource: "@BazingaJsTranslationBundle/Resources/config/routing/routing.yml"
 
 bitbag_sylius_cms_plugin:
     resource: "@BitBagSyliusCmsPlugin/Resources/config/routing.yml"
+
+bitbag_sylius_mollie_plugin:
+    resource: "@BitBagSyliusMolliePlugin/Resources/config/routing.yaml"
 
 odiseo_sylius_blog_plugin_admin:
     resource: "@OdiseoSyliusBlogPlugin/Resources/config/routing/admin.yaml"
@@ -13,3 +16,6 @@ odiseo_sylius_blog_plugin_shop:
     prefix: /{_locale}/blog
     requirements:
         _locale: ^[A-Za-z]{2,4}(_([A-Za-z]{4}|[0-9]{3}))?(_([A-Za-z]{2}|[0-9]{3}))?$
+
+sylius_paypal_webhook:
+    resource: "@SyliusPayPalPlugin/Resources/config/webhook_routing.yaml"
