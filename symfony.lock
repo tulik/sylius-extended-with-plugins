@@ -685,6 +685,19 @@
     "sylius/grid-bundle": {
         "version": "v1.5.1"
     },
+    "sylius/invoicing-plugin": {
+        "version": "0.22",
+        "recipe": {
+            "repo": "github.com/symfony/recipes-contrib",
+            "branch": "main",
+            "version": "0.5",
+            "ref": "4720bdeb3db9f81932523a640184244cf75da7f0"
+        },
+        "files": [
+            "config/packages/sylius_invoicing.yaml",
+            "config/routes/sylius_invoicing.yaml"
+        ]
+    },
     "sylius/mailer-bundle": {
         "version": "v1.4.4"
     },

@@ -1,0 +1,24 @@
+sylius_invoicing_plugin_admin:
+    resource: "@SyliusInvoicingPlugin/Resources/config/app/routing/admin_invoicing.yml"
+    prefix: /admin
+
+sylius_invoicing_plugin_shop:
+    resource: "@SyliusInvoicingPlugin/Resources/config/app/routing/shop_invoicing.yml"
+    prefix: /{_locale}
+    requirements:
+        _locale: ^[a-z]{2}(?:_[A-Z]{2})?$
+
+sylius_invoicing_plugin_invoice:
+    resource: |
+        alias: sylius_invoicing_plugin.invoice
+        section: admin
+        templates: "@SyliusAdmin\\Crud"
+        only: ['index']
+        grid: sylius_invoicing_plugin_invoice
+        permission: true
+        vars:
+            all:
+                subheader: sylius_invoicing_plugin.ui.manage_invoices
+            index:
+                icon: inbox
+    type: sylius.resource
