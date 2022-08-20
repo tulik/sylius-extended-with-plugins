@@ -1,7 +1,9 @@
 name: Auto-merge
 
 on:
-    pull_request: ~
+    pull_request:
+        branches-ignore:
+            - "feature/**"
 
 jobs:
     auto-merge:
