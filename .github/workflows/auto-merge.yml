@@ -2,6 +2,9 @@ name: Auto-merge
 
 on:
     pull_request:
+        branches:
+            - "dependabot/**"
+            - "refactor/**"
         branches-ignore:
             - "feature/**"
 
