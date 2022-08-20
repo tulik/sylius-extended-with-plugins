@@ -3,6 +3,7 @@
 /public/js
 /public/media/cache
 /public/media/image/**
+!/public/media/image/.gitkeep
 
 /node_modules
 
