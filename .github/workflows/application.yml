@@ -16,8 +16,8 @@ on:
             cron: "0 1 * * 6" # Run at 1am every Saturday
     workflow_dispatch: ~
 
-concurrency:
-    group: ${{ github.head_ref }}
+concurrency: 
+    group: ${{ github.head_ref || github.run_id }}
     cancel-in-progress: true
 
 jobs:
