@@ -2,8 +2,9 @@ name: Auto-merge
 
 on:
     pull_request:
-        branches-ignore:
-            - "feature/**"
+        branches:
+            - "dependabot/**"
+            - "refactor/**"
 
 jobs:
     auto-merge:
