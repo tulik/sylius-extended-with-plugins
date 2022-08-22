@@ -1,7 +1,11 @@
 name: Auto-merge
 
 on:
-    pull_request: ~
+    pull_request:
+        branches:
+            - "dependabot/**"
+            - "refactor/**"
+            - "feature/**"
 
 jobs:
     auto-merge:

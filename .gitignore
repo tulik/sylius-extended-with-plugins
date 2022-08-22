@@ -1,13 +1,14 @@
 /public/assets
 /public/css
 /public/js
-/public/media
-!/public/media/image/.gitkeep
+/public/media/cache
+/public/media/image/**
+/private/invoices/
 
 /node_modules
 
 /etc/build/*
-!/etc/build/.gitignore
+!/etc/build/.gitkeep
 
 /behat.yml
 /phpspec.yml
