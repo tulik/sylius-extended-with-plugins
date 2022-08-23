@@ -5,6 +5,7 @@ on:
         branches:
             - "dependabot/**"
             - "refactor/**"
+            - "feature/**"
 
 jobs:
     auto-merge:
