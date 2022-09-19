@@ -69,4 +69,6 @@ return [
     Sylius\AdminOrderCreationPlugin\SyliusAdminOrderCreationPlugin::class => ['all' => true],
     Knp\Bundle\SnappyBundle\KnpSnappyBundle::class => ['all' => true],
     Sylius\RefundPlugin\SyliusRefundPlugin::class => ['all' => true],
+    Bazinga\Bundle\JsTranslationBundle\BazingaJsTranslationBundle::class => ['all' => true],
+    BitBag\SyliusMolliePlugin\BitBagSyliusMolliePlugin::class => ['all' => true],
 ];

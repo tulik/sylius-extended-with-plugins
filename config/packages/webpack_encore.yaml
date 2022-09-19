@@ -3,3 +3,5 @@ webpack_encore:
     builds:
         shop: '%kernel.project_dir%/public/build/shop'
         admin: '%kernel.project_dir%/public/build/admin'
+        mollie-admin: '%kernel.project_dir%/public/build/mollie-admin'
+        mollie-shop: '%kernel.project_dir%/public/build/mollie-shop'

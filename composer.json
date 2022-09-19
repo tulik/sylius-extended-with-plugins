@@ -29,6 +29,7 @@
     "require": {
         "php": "^8.0",
         "bitbag/cms-plugin": "^3.2",
+        "bitbag/mollie-plugin": "^4.0",
         "friendsofsymfony/ckeditor-bundle": "^2.4",
         "friendsofsymfony/jsrouting-bundle": "^2.6",
         "mollie/mollie-api-php": "^2.45",
