@@ -11,6 +11,8 @@ imports:
 
     - { resource: "@OdiseoSyliusBlogPlugin/Resources/config/config.yaml" }
 
+    - { resource: "@BitBagSyliusMolliePlugin/Resources/config/config.yaml" }
+
 parameters:
     sylius_core.public_dir: '%kernel.project_dir%/public'
     odiseo_blog.model.article.class: Odiseo\SyliusBlogPlugin\Entity\Article
