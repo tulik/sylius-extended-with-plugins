@@ -1,0 +1,638 @@
+name: Application
+
+on:
+    push:
+        branches:
+            - "main"
+    pull_request:
+        branches-ignore:
+            - "refactor/**"
+        paths-ignore:
+            - "adr/**"
+            - "*.md"
+    schedule:
+        -
+            cron: "0 1 * * 6" # Run at 1am every Saturday
+    workflow_dispatch: ~
+
+concurrency:
+    group: ${{ github.head_ref || github.run_id }}
+    cancel-in-progress: true
+
+jobs:
+    static-checks:
+        runs-on: ubuntu-latest
+
+        name: "Static checks (PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }})"
+
+        timeout-minutes: 10
+
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ["8.1"]
+                symfony: ["^5.4"]
+
+        steps:
+            -
+                uses: actions/checkout@v2
+
+            -
+                name: Get branch name
+                uses: tj-actions/branch-names@v5.2
+                id: branch-name
+
+            -
+                name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: "${{ matrix.php }}"
+                    ini-values: date.timezone=Europe/Warsaw, opcache.enable=1, opcache.enable_cli=0, opcache.memory_consumption=512, opcache.max_accelerated_files=65407, opcache.interned_strings_buffer=8, opcache.validate_timestamps=0, opcache.save_comments=1, opcache.fast_shutdown=0
+                    extensions: intl, gd, opcache, mysql, pdo_mysql
+                    tools: symfony, composer-require-checker
+                    coverage: none
+
+            -
+                name: Restrict Symfony version
+                if: matrix.symfony != ''
+                run: |
+                    composer global config --no-plugins allow-plugins.symfony/flex true
+                    composer global require --no-progress --no-scripts --no-plugins "symfony/flex:1.18.5"
+                    composer config extra.symfony.require "${{ matrix.symfony }}"
+
+            -
+                name: Get Composer cache directory
+                run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+                id: composer-cache
+
+            -
+                name: Cache Composer
+                uses: actions/cache@v2
+                with:
+                    path: ${{ steps.composer-cache.outputs.dir }}
+                    key: ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: |
+                        ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-
+
+            -
+                name: Cache composer.lock
+                uses: actions/cache@v2
+                with:
+                    path: composer.lock
+                    key: ${{ steps.branch-name.outputs.base_ref_branch }}-${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-lock
+                    restore-keys: |
+                        ${{ steps.branch-name.outputs.base_ref_branch }}-${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-lock
+            -
+                name: Check existence of composer.lock
+                uses: andstor/file-existence-action@v1
+                id: check-old-composer-lock-existence
+                with:
+                    files: composer.lock
+            -
+                name: Move cached composer.lock (if exists)
+                run: mv composer.lock old-composer.lock
+                if: steps.check-old-composer-lock-existence.outputs.files_exists == 'true'
+
+            -
+                name: Install PHP dependencies
+                run: composer update --no-interaction --no-scripts
+                id: end-of-setup
+
+            -
+                name: Validate composer.json
+                run: composer validate --strict --no-check-version
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+            -
+                name: Generate composer diff
+                uses: IonBazan/composer-diff-action@v1
+                if: steps.check-old-composer-lock-existence.outputs.files_exists == 'true'
+                id: composer_diff
+                with:
+                    base: old-composer.lock
+
+            -
+                name: Check for security vulnerabilities
+                run: symfony security:check
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+            -
+                name: Validate Twig templates
+                run: bin/console lint:twig src
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+            -
+                name: Validate Container
+                run: bin/console lint:container
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+            -
+                name: Validate Yaml files
+                run: bin/console lint:yaml src
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+            -
+                name: Run Psalm
+                run: vendor/bin/psalm --show-info=false --output-format=github --php-version=${{ matrix.php }}
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+            -
+                name: Run PHPStan
+                run: vendor/bin/phpstan analyse
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+    architecture-tests:
+        runs-on: ubuntu-latest
+
+        name: "Architecture tests (PHPArkitect)"
+
+        timeout-minutes: 10
+
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ["8.1"]
+
+        steps:
+            -
+                uses: actions/checkout@v2
+
+            -
+                name: Run PHPArkitect
+                uses: docker://phparkitect/arkitect-github-actions
+                env:
+                    PHP_VERSION: "${{ matrix.php }}"
+                with:
+                    args: check
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+    classes-specifictions:
+        runs-on: ubuntu-latest
+
+        name: "Classes specifications (PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }})"
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ["8.1"]
+                symfony: ["^5.4"]
+
+        steps:
+            -   uses: actions/checkout@v2
+
+            -   name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: "${{ matrix.php }}"
+                    ini-values: date.timezone=Europe/Warsaw, opcache.enable=1, opcache.enable_cli=0, opcache.memory_consumption=512, opcache.max_accelerated_files=65407, opcache.interned_strings_buffer=8, opcache.validate_timestamps=0, opcache.save_comments=1, opcache.fast_shutdown=0
+                    extensions: intl, gd, opcache, mysql, pdo_mysql
+                    tools: symfony
+                    coverage: none
+
+            -   name: Restrict Symfony version
+                if: matrix.symfony != ''
+                run: |
+                    composer global config --no-plugins allow-plugins.symfony/flex true
+                    composer global require --no-progress --no-scripts --no-plugins "symfony/flex:1.18.5"
+                    composer config extra.symfony.require "${{ matrix.symfony }}"
+            -   name: Get Composer cache directory
+                id: composer-cache
+                run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+            -   name: Cache Composer
+                uses: actions/cache@v2
+                with:
+                    path: ${{ steps.composer-cache.outputs.dir }}
+                    key: ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: |
+                        ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-
+            -   name: Install PHP dependencies
+                run: composer update --no-interaction --no-scripts
+                id: end-of-setup
+
+            -   name: Run PHPSpec
+                run: vendor/bin/phpspec run --ansi --no-interaction -f dot
+
+    test-application-without-frontend-mysql:
+        runs-on: ubuntu-latest
+
+        name: "Test non-JS application (PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }}, MySQL ${{ matrix.mysql }}, Twig ${{ matrix.twig }}, DBAL ${{ matrix.dbal }}.x)"
+
+        timeout-minutes: 25
+
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ["8.1"]
+                symfony: ["^5.4"]
+                mysql: ["8.0"]
+                twig: ["2.x"]
+                dbal: ["3"]
+
+        env:
+            APP_ENV: test_cached
+            DATABASE_URL: "mysql://root:root@127.0.0.1/sylius?charset=utf8mb4&serverVersion=${{ matrix.mysql }}"
+
+        steps:
+            -
+                uses: actions/checkout@v2
+
+            -
+                name: Shutdown default MySQL
+                run: sudo service mysql stop
+
+            -
+                name: Setup MySQL
+                uses: mirromutth/mysql-action@v1.1
+                with:
+                    mysql version: "${{ matrix.mysql }}"
+                    mysql root password: "root"
+
+            -
+                name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: "${{ matrix.php }}"
+                    ini-values: date.timezone=Europe/Warsaw, opcache.enable=1, opcache.enable_cli=0, opcache.memory_consumption=512, opcache.max_accelerated_files=65407, opcache.interned_strings_buffer=8, opcache.validate_timestamps=0, opcache.save_comments=1, opcache.fast_shutdown=0
+                    extensions: intl, gd, opcache, mysql, pdo_mysql
+                    tools: symfony
+                    coverage: none
+
+            -
+                name: Restrict Symfony version
+                if: matrix.symfony != ''
+                run: |
+                    composer global config --no-plugins allow-plugins.symfony/flex true
+                    composer global require --no-progress --no-scripts --no-plugins "symfony/flex:1.18.5"
+                    composer config extra.symfony.require "${{ matrix.symfony }}"
+
+            -
+                name: Restrict doctrine/dbal version
+                if: matrix.dbal == '2'
+                run: |
+                    composer require "doctrine/dbal:^2.0" --no-update --no-scripts --no-interaction
+
+            -
+                name: Get Composer cache directory
+                id: composer-cache
+                run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+            -
+                name: Cache Composer
+                uses: actions/cache@v2
+                with:
+                    path: ${{ steps.composer-cache.outputs.dir }}
+                    key: ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: |
+                        ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-
+
+            -
+                name: Restrict Twig version
+                if: matrix.twig != ''
+                run: |
+                    composer require "twig/twig:${{ matrix.twig }}" --no-update --no-scripts --no-interaction
+
+            -
+                name: Install PHP dependencies
+                run: composer update --no-interaction --no-scripts
+
+            -
+                name: Dump the environment
+                run: |
+                    echo "DATABASE_URL=$DATABASE_URL" >> .env.$APP_ENV
+                    composer dump-env $APP_ENV
+
+            -
+                name: Warmup cache
+                run: bin/console cache:warmup
+
+            -
+                name: Make filesystem readonly
+                run: chmod -R 555 bin config features src templates tests translations vendor
+
+            -
+                name: Prepare application database
+                run: |
+                    APP_DEBUG=1 bin/console doctrine:database:create -vvv
+                    bin/console doctrine:migrations:migrate -n -vvv
+
+            -
+                name: Test provided migrations
+                run: |
+                    bin/console doctrine:migrations:migrate first --no-interaction
+                    bin/console doctrine:migrations:migrate latest --no-interaction
+
+            -
+                name: Validate Database Schema
+                run: bin/console doctrine:schema:validate -vvv
+
+            -
+                name: Test installer
+                run: bin/console sylius:install --no-interaction -vvv
+
+            -
+                name: Load fixtures
+                run: bin/console sylius:fixtures:load default --no-interaction
+
+            -
+                name: Run PHPUnit
+                run: |
+                    bin/console cache:pool:clear cache.global_clearer
+                    vendor/bin/phpunit --debug
+
+            -
+                name: Run CLI Behat
+                run: vendor/bin/behat --colors --strict --no-interaction -f progress --tags="@cli&&~@todo" || vendor/bin/behat --strict --no-interaction -f progress --tags="@cli&&~@todo" --rerun
+
+            -
+                name: Run non-JS Behat
+                run: vendor/bin/behat --colors --strict --no-interaction -f progress --tags="~@javascript&&~@todo&&~@cli" || vendor/bin/behat --strict --no-interaction -f progress --tags="~@javascript&&~@todo&&~@cli" --rerun
+
+            -
+                name: Upload Behat logs
+                uses: actions/upload-artifact@v2
+                if: failure()
+                with:
+                    name: "Behat logs (non-JS, PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }})"
+                    path: etc/build/
+                    if-no-files-found: ignore
+
+    test-application-with-frontend:
+        runs-on: ubuntu-latest
+
+        name: "Test JS application (PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }}, MySQL ${{ matrix.mysql }}, Node ${{ matrix.node }})"
+
+        timeout-minutes: 25
+
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ["8.1"]
+                symfony: ["^5.4"]
+                node: ["14.x"]
+                mysql: ["8.0"]
+
+        env:
+            APP_ENV: test_cached
+            DATABASE_URL: "mysql://root:root@127.0.0.1/sylius?charset=utf8mb4&serverVersion=${{ matrix.mysql }}"
+
+        steps:
+            -
+                uses: actions/checkout@v2
+
+            -
+                name: Shutdown default MySQL
+                run: sudo service mysql stop
+
+            -
+                name: Setup MySQL
+                uses: mirromutth/mysql-action@v1.1
+                with:
+                    mysql version: "${{ matrix.mysql }}"
+                    mysql root password: "root"
+
+            -
+                name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: "${{ matrix.php }}"
+                    ini-values: date.timezone=Europe/Warsaw, opcache.enable=1, opcache.enable_cli=0, opcache.memory_consumption=512, opcache.max_accelerated_files=65407, opcache.interned_strings_buffer=8, opcache.validate_timestamps=0, opcache.save_comments=1, opcache.fast_shutdown=0
+                    extensions: intl, gd, opcache, mysql, pdo_mysql
+                    tools: symfony
+                    coverage: none
+
+            -
+                name: Restrict Symfony version
+                if: matrix.symfony != ''
+                run: |
+                    composer global config --no-plugins allow-plugins.symfony/flex true
+                    composer global require --no-progress --no-scripts --no-plugins "symfony/flex:1.18.5"
+                    composer config extra.symfony.require "${{ matrix.symfony }}"
+
+            -
+                name: Install certificates
+                run: symfony server:ca:install
+
+            -
+                name: Run Chrome Headless
+                run: google-chrome-stable --enable-automation --disable-background-networking --no-default-browser-check --no-first-run --disable-popup-blocking --disable-default-apps --disable-translate --disable-extensions --no-sandbox --enable-features=Metal --headless --remote-debugging-port=9222 --window-size=2880,1800 --proxy-server='direct://' --proxy-bypass-list='*' https://127.0.0.1 > /dev/null 2>&1 &
+
+            -
+                name: Get Composer cache directory
+                id: composer-cache
+                run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+            -
+                name: Cache Composer
+                uses: actions/cache@v2
+                with:
+                    path: ${{ steps.composer-cache.outputs.dir }}
+                    key: ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: |
+                        ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-
+
+            -
+                name: Install PHP dependencies
+                run: composer update --no-interaction --no-scripts
+
+            -
+                name: Setup Node
+                uses: actions/setup-node@v2
+                with:
+                    node-version: "${{ matrix.node }}"
+
+            -
+                name: Get Yarn cache directory
+                id: yarn-cache
+                run: echo "::set-output name=dir::$(yarn cache dir)"
+
+            -
+                name: Cache Yarn
+                uses: actions/cache@v2
+                with:
+                    path: ${{ steps.yarn-cache.outputs.dir }}
+                    key: ${{ runner.os }}-node-${{ matrix.node }}-yarn-${{ hashFiles('**/package.json **/yarn.lock') }}
+                    restore-keys: |
+                        ${{ runner.os }}-node-${{ matrix.node }}-yarn-
+
+            -
+                name: Install JS dependencies
+                run: yarn install
+
+            -
+                name: Validate Yarn packages
+                run: yarn check
+
+            -
+                name: Dump the environment
+                run: |
+                    echo "DATABASE_URL=$DATABASE_URL" >> .env.$APP_ENV
+                    composer dump-env $APP_ENV
+
+            -
+                name: Warmup cache
+                run: bin/console cache:warmup
+
+            -
+                name: Run webserver
+                run: symfony server:start --port=8080 --dir=public --daemon
+
+            -
+                name: Prepare application database
+                run: |
+                    APP_DEBUG=1 bin/console doctrine:database:create -vvv
+                    bin/console doctrine:migrations:migrate -n -vvv
+
+            -
+                name: Validate Database Schema
+                run: bin/console doctrine:schema:validate -vvv
+
+            -
+                name: Build assets
+                run: |
+                    bin/console assets:install public
+                    GULP_ENV=prod yarn build
+
+            -
+                name: Make filesystem readonly
+                run: chmod -R 555 bin config features src templates tests translations vendor
+
+            -
+                name: Run JS Behat
+                run: |
+                    bin/console cache:pool:clear cache.global_clearer
+                    vendor/bin/behat --colors --strict --no-interaction -v -f progress --tags="@javascript&&~@todo&&~@cli" || vendor/bin/behat --colors --strict --no-interaction -f progress --tags="@javascript&&~@todo&&~@cli" --rerun || vendor/bin/behat --colors --strict --no-interaction -f progress --tags="@javascript&&~@todo&&~@cli" --rerun
+
+            -
+                name: Upload Behat logs
+                uses: actions/upload-artifact@v2
+                if: failure()
+                with:
+                    name: "Behat logs (JS, PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }})"
+                    path: etc/build/
+                    if-no-files-found: ignore
+
+    test-webpack-build:
+        runs-on: ubuntu-latest
+
+        name: "Test Webpack build (PHP ${{ matrix.php }}, Symfony ${{ matrix.symfony }}, MySQL ${{ matrix.mysql }}, Node ${{ matrix.node }})"
+
+        timeout-minutes: 25
+
+        strategy:
+            fail-fast: false
+            matrix:
+                php: ["8.1"]
+                symfony: ["^5.4"]
+                node: ["14.x"]
+                mysql: ["8.0"]
+        
+        env:
+            APP_ENV: test_cached
+            DATABASE_URL: "mysql://root:root@127.0.0.1/sylius?serverVersion=${{ matrix.mysql }}"
+
+        steps:
+            -
+                uses: actions/checkout@v2
+
+            -
+                name: Shutdown default MySQL
+                run: sudo service mysql stop
+
+            -
+                name: Setup MySQL
+                uses: mirromutth/mysql-action@v1.1
+                with:
+                    mysql version: "${{ matrix.mysql }}"
+                    mysql root password: "root"
+
+            -
+                name: Setup PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: "${{ matrix.php }}"
+                    ini-values: date.timezone=Europe/Warsaw, opcache.enable=1, opcache.enable_cli=0, opcache.memory_consumption=512, opcache.max_accelerated_files=65407, opcache.interned_strings_buffer=8, opcache.validate_timestamps=0, opcache.save_comments=1, opcache.fast_shutdown=0
+                    extensions: intl, gd, opcache, mysql, pdo_mysql
+                    tools: symfony
+                    coverage: none
+
+            -
+                name: Validate Composer.json
+                run: |
+                    composer validate --strict
+                if: always() && steps.end-of-setup.outcome == 'success'
+
+            -
+                name: Restrict Symfony version
+                if: matrix.symfony != ''
+                run: |
+                    composer global config --no-plugins allow-plugins.symfony/flex true
+                    composer global require --no-progress --no-scripts --no-plugins "symfony/flex:1.18.5"
+                    composer config extra.symfony.require "${{ matrix.symfony }}"
+
+            -
+                name: Get Composer cache directory
+                id: composer-cache
+                run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+            -
+                name: Cache Composer
+                uses: actions/cache@v2
+                with:
+                    path: ${{ steps.composer-cache.outputs.dir }}
+                    key: ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: |
+                        ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-
+
+            -
+                name: Install PHP dependencies
+                run: composer update --no-interaction --no-scripts
+
+            -
+                name: Setup Node
+                uses: actions/setup-node@v2
+                with:
+                    node-version: "${{ matrix.node }}"
+
+            -
+                name: Get Yarn cache directory
+                id: yarn-cache
+                run: echo "::set-output name=dir::$(yarn cache dir)"
+
+            -
+                name: Cache Yarn
+                uses: actions/cache@v2
+                with:
+                    path: ${{ steps.yarn-cache.outputs.dir }}
+                    key: ${{ runner.os }}-node-${{ matrix.node }}-yarn-${{ hashFiles('**/package.json **/yarn.lock') }}
+                    restore-keys: |
+                        ${{ runner.os }}-node-${{ matrix.node }}-yarn-
+
+            -
+                name: Install JS dependencies
+                run: yarn install
+
+            -
+                name: Build assets
+                run: |
+                    bin/console assets:install public
+                    yarn run encore production
+
+    notify-about-build-failure:
+        runs-on: ubuntu-latest
+
+        if: failure() && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release')
+
+        needs: [static-checks, test-application-without-frontend-mysql, test-application-with-frontend]
+
+        name: "Notify about build failure"
+
+        timeout-minutes: 5
+
+        steps:
+            -
+                name: "Process data"
+                id: process-data
+                shell: bash
+                run: |
+                    echo "::set-output name=branch::$(echo ${{ github.ref }} | sed 's/refs\/heads\///g' | sed 's/refs\/tags\///g')"
+                    echo "::set-output name=sha::$(echo ${{ github.sha }} | cut -c 1-12)"

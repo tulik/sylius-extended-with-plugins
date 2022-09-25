@@ -1,3 +1,21 @@
+includes:
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+
 parameters:
+    level: 1
+
+    reportUnmatchedIgnoredErrors: false
+
+    paths:
+        - 'src/'
+
+    excludePaths:
+        # Vendor files in subpackages
+        - '**/Bundle/*/vendor/**.php'
+        - '**/Component/*/vendor/**.php'
+
+        # Deprecated classes
+        - 'src/Sylius/Bundle/CoreBundle/Application/Kernel.php'
+
     ignoreErrors:
-        - '/Generator expects value type Symfony\\Component\\HttpKernel\\Bundle\\BundleInterface\, object given\./'
+        - '/Access to an undefined property Doctrine\\Common\\Collections\\ArrayCollection/'
