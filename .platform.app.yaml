@@ -1,17 +1,21 @@
 name: app
-type: php:8.1
+type: php:8.0
 build:
     flavor: composer
 
 variables:
+    env:
+        # Tell Symfony to always install in production-mode.
+        APP_ENV: 'prod'
+        APP_DEBUG: 0
     php:
         opcache.preload: /app/config/preload.php
+
 hooks:
     build: |
         set -x -e
         yarn install
         GULP_ENV=prod yarn build
-        set -x -e
         curl -s https://get.symfony.com/cloud/configurator | (>&2 bash)
     deploy: |
         set -x -e
