@@ -1,5 +1,5 @@
 name: app
-type: php:8.0
+type: php:8.1
 build:
     flavor: composer
 
@@ -9,8 +9,11 @@ variables:
         APP_ENV: 'prod'
         APP_DEBUG: 0
     php:
-        opcache.preload: /app/config/preload.php
-
+        memory_limit: -1
+        opcache:
+            preload: /app/config/preload.php
+            memory_consumption: 512G
+            max_accelerated_files: 20000
 hooks:
     build: |
         set -x -e
