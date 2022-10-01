@@ -29,6 +29,7 @@
     "require": {
         "php": "^8.0",
         "bitbag/cms-plugin": "^3.2",
+        "doctrine/orm": "^2.13",
         "friendsofsymfony/ckeditor-bundle": "^2.4",
         "friendsofsymfony/jsrouting-bundle": "^2.6",
         "mollie/mollie-api-php": "^2.45",
@@ -43,7 +44,6 @@
     },
     "conflict": {
         "symfony/form": "4.4.11 || 4.4.12",
-        "sylius/sylius": "1.11.8"
     },
     "require-dev": {
         "behat/behat": "^3.7",
