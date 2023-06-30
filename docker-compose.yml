@@ -85,17 +85,7 @@ services:
       - public-media:/srv/sylius/public/media:ro,nocopy
     ports:
       - "80:80"
-
-  mailhog:
-    # do not use in production!
-    image: mailhog/mailhog:latest
-    environment:
-      - MH_STORAGE=maildir
-    # volumes:
-    #   - ./docker/mailhog/maildir:/maildir:rw,delegated
-    ports:
-      - "8025:8025"
-
+      
 volumes:
   mysql-data:
   public-media:
